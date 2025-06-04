@@ -1,7 +1,6 @@
 from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
 import streamlit as st
-import os
 import json
 
 INDEX_NAME='trade-finance-dense-db'
@@ -24,7 +23,7 @@ def get_embeddings(text):
     return embedding
 
 def query(question):
-    pc = Pinecone(os.getenv('PINECONE_API_KEY'))
+    pc = Pinecone(st.secrets["api_key"])
     index = pc.Index(INDEX_NAME)
     model=SentenceTransformer('intfloat/multilingual-e5-large')
     query_vector = model.encode(question)
@@ -75,7 +74,7 @@ def show_ui():
     if st.button("Search"):
         with st.spinner("Searching..."):
             filter_query = {search_by: {"$eq": value}} if value else {}
-            pc = Pinecone(os.getenv('PINECONE_API_KEY'))
+            pc = Pinecone(st.secrets["api_key"])
             index = pc.Index(INDEX_NAME)
             model = SentenceTransformer('intfloat/multilingual-e5-large')
             query_vector = model.encode(question if question else "search")
