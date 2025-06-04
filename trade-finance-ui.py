@@ -53,13 +53,57 @@ def show_ui():
     st.title("Search Data of Limit Facility")
     st.header("Ask questions about the old limit facility data")
 
-    search_by = st.selectbox(
-        "Search by",
-        options=["FACILITY_CODE", "FACILITY_ORDER", "PROCESS_TYPE"],
-        index=0
-    )
+    st.subheader("Add Search Filters")
+    if "filters" not in st.session_state:
+        st.session_state.filters = []
 
-    value = st.text_input(f"Enter value for {search_by}")
+    def add_filter():
+        st.session_state.filters.append({"search_by": "FACILITY_CODE", "value": ""})
+
+    if st.button("Add Filter"):
+        add_filter()
+
+    # Render dynamic filters
+    for idx, filter_item in enumerate(st.session_state.filters):
+        cols = st.columns([2, 3, 1])
+        with cols[0]:
+            search_by = st.selectbox(
+                "Search by",
+                options=["FACILITY_CODE", "FACILITY_ORDER", "PROCESS_TYPE"],
+                index=["FACILITY_CODE", "FACILITY_ORDER", "PROCESS_TYPE"].index(filter_item["search_by"]),
+                key=f"search_by_{idx}"
+            )
+        with cols[1]:
+            value = st.text_input(
+                f"Enter value for {search_by}",
+                value=filter_item["value"],
+                key=f"value_{idx}"
+            )
+        with cols[2]:
+            if st.button("Remove", key=f"remove_{idx}"):
+                st.session_state.filters.pop(idx)
+                st.experimental_rerun()
+        # Update filter values in session state
+        st.session_state.filters[idx]["search_by"] = search_by
+        st.session_state.filters[idx]["value"] = value
+
+    # Build filter_query from all filters
+    filter_query = {}
+    for f in st.session_state.filters:
+        if f["value"]:
+            filter_query[f["search_by"]] = {"$eq": f["value"]}
+
+    # For backward compatibility, if no filters, show default single filter
+    if not st.session_state.filters:
+        search_by = st.selectbox(
+            "Search by",
+            options=["FACILITY_CODE", "FACILITY_ORDER", "PROCESS_TYPE"],
+            index=0,
+            key="default_search_by"
+        )
+        value = st.text_input(f"Enter value for {search_by}", key="default_value")
+        if value:
+            filter_query = {search_by: {"$eq": value}}
 
     question = st.text_area("Or enter your query (multi-line)", height=100)
 
