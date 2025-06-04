@@ -10,7 +10,7 @@ TOP_K_VAL=3
 
 
 def get_embeddings(text):
-    pc = Pinecone(os.getenv("PINECONE_API_KEY"))
+    pc = Pinecone(st.secrets["api_key"])
     res = pc.inference.embed(
         model="multilingual-e5-large",
         inputs=text,
