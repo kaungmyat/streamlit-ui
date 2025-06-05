@@ -4,9 +4,11 @@ import streamlit as st
 import json
 
 INDEX_NAME='trade-finance-dense-db'
-NAMESPACE='default'
+# NAMESPACE='default'
+NAMESPACES= ['default', 'LND_HISTORY']
 TOP_K_VAL=3
 
+META_KEYS=["FACILITY_CODE", "FACILITY_ORDER", "PROCESS_TYPE", "HISTORY_SEQ_NO", "JOURNAL_NO", "LOAN_KEY", "SOURCE_TYPE"]
 
 def get_embeddings(text):
     pc = Pinecone(st.secrets["api_key"])
@@ -27,10 +29,11 @@ def query(question):
     index = pc.Index(INDEX_NAME)
     model=SentenceTransformer('intfloat/multilingual-e5-large')
     query_vector = model.encode(question)
-    results = index.query(
-        namespace=NAMESPACE,
+    results = index.query_namespaces(
+        namespaces=NAMESPACES,
         vector=query_vector.tolist(),
         top_k=6,
+        metric="cosine",
         include_metadata=True,
         filter={
             "FACILITY_CODE": {
@@ -69,8 +72,8 @@ def show_ui():
         with cols[0]:
             search_by = st.selectbox(
                 "Search by",
-                options=["FACILITY_CODE", "FACILITY_ORDER", "PROCESS_TYPE"],
-                index=["FACILITY_CODE", "FACILITY_ORDER", "PROCESS_TYPE"].index(filter_item["search_by"]),
+                options=META_KEYS,
+                index=META_KEYS.index(filter_item["search_by"]),
                 key=f"search_by_{idx}"
             )
         with cols[1]:
@@ -97,7 +100,7 @@ def show_ui():
     if not st.session_state.filters:
         search_by = st.selectbox(
             "Search by",
-            options=["FACILITY_CODE", "FACILITY_ORDER", "PROCESS_TYPE"],
+            options=META_KEYS,
             index=0,
             key="default_search_by"
         )
@@ -122,17 +125,18 @@ def show_ui():
             index = pc.Index(INDEX_NAME)
             model = SentenceTransformer('intfloat/multilingual-e5-large')
             query_vector = model.encode(question if question else "search")
-            results = index.query(
-                namespace=NAMESPACE,
+            results = index.query_namespaces(
+                namespaces=NAMESPACES,
                 vector=query_vector.tolist(),
                 top_k=top_k,
+                metric="cosine",
                 include_metadata=True,
                 filter=filter_query
             )
             if results['matches']:
-                for idx, sv in enumerate(results['matches'], 1):
-                    jsObj = json.dumps(sv.to_dict(), indent=2)
-                    st.markdown(f"**Result {idx}:**")
+                for idx, jsObj in enumerate(results.matches):
+                    # jsObj = json.dumps(sv.to_dict(), indent=2)
+                    st.markdown(f"**Result {idx+1}:**")
                     st.markdown(f"```json\n{jsObj}\n```")
             else:
                 st.info("No results found.")
